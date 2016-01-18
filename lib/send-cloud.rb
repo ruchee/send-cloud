@@ -73,7 +73,12 @@ module SendCloud
 
     needed_keys = necessary - params.keys
     if needed_keys != []
-      return "缺少必填参数：#{needed_keys.join(',')}"
+      ret = {
+        result: false,
+        statusCode: -1,
+        message: "缺少必填参数：#{needed_keys.join(',')}"
+      }
+      return ret.to_json
     end
 
     url = "#{API_BASE}/#{path}"
