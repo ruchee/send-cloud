@@ -74,9 +74,9 @@ module SendCloud
     needed_keys = necessary - params.keys
     if needed_keys != []
       return {
-        result: false,
-        statusCode: -1,
-        message: "缺少必填参数：#{needed_keys.join(',')}"
+        'result' => false,
+        'statusCode' => -1,
+        'message' => "缺少必填参数：#{needed_keys.join(',')}"
       }
     end
 
