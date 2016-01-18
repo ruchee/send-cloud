@@ -21,18 +21,14 @@ Or install it yourself as:
 #### Configure
 
 ```ruby
-
 SendCloud.setup do |config|
-  config.apiUser = 'your api user'
-  config.apiKey = 'your api key'
+  config.api_user = 'your api user'
+  config.api_key = 'your api key'
 end
-
 ```
 
 #### Call the api
 
 ```ruby
-
-SendCloud::Mail.send(to: 'test@example.com', from: 'test@example.com', subject: 'test', html: 'test')
-
+SendCloud::Mail.send(from: 'test@example.com', to: 'test@example.com', subject: 'test', html: 'test')
 ```
