@@ -1,7 +1,7 @@
 require 'action_mailer'
 require 'rest-client'
 require 'json'
-require 'logger'
+require 'logging'
 
 require 'send-cloud/addresslist'
 require 'send-cloud/addressmember'
@@ -31,7 +31,7 @@ module SendCloud
 
     def deliver! (mail)
       begin
-        SendCloud::Mail.send({
+        SendCloud::Mail.sendtemplate({
           from: mail.from_addrs.first,
           to: mail.destinations.join(';'),
           subject: mail.subject,
@@ -50,10 +50,15 @@ module SendCloud
 
   def self.setup
     yield self
+
+    $logger = Logging.logger['send-cloud']
+    $logger.level = SendCloud.log_level
+    $logger.add_appenders(Logging.appenders.stdout, Logging.appenders.file(SendCloud.log_file)) unless
+    SendCloud.log_file == '' || SendCloud.log_file.nil?
   end
 
   class << self
-    attr_accessor :api_user, :api_key
+    attr_accessor :api_user, :api_key, :log_file, :log_level
   end
 
   def self.get(path, params, necessary = [])
@@ -69,6 +74,8 @@ module SendCloud
   end
 
   def self.request(path, params, necessary, &block)
+    $logger.info "#{Time.now} action is #{path}, params is #{params.inspect}"
+
     params = { apiUser: SendCloud.api_user, apiKey: SendCloud.api_key }.merge(params)
 
     needed_keys = necessary - params.keys
@@ -82,8 +89,16 @@ module SendCloud
 
     url = "#{API_BASE}/#{path}"
     begin
-      return JSON.parse(yield(url, params))
+      raw_ret = yield(url, params)
+      ret = JSON.parse(raw_ret)
+      if ret['statusCode'] != 200
+        $logger.error "#{Time.now} result is #{raw_ret}"
+      else
+        $logger.info "#{Time.now} result is #{raw_ret}"
+      end
+      return ret
     rescue JSON::ParserError
+      $logger.error "#{Time.now} get JSON ParseError"
       raise SendCloud::Error.new('send-cloud response invalid')
     end
   end

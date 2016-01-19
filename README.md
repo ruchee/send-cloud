@@ -24,6 +24,7 @@ Or install it yourself as:
 SendCloud.setup do |config|
   config.api_user = 'your api user'
   config.api_key = 'your api key'
+  config.log_file = Rails.root.join 'log', 'send-cloud.log'
 end
 ```
 
