@@ -5,13 +5,13 @@ describe  SendCloud::Mail do
   describe 'sendtemplate' do
 
     it 'should return 200' do
-      response = SendCloud::Mail.sendtemplate({
+      response = SendCloud::Mail.sendtemplate(
         from: 'xxx@IWZtk4sFyTbLMowA5XE3DQ3oIWAGIjLs.sendcloud.org',
         to: 'my@ruchee.com',
         subject: 'test',
         xsmtpapi: '{"to": ["my@ruchee.com"]}',
         templateInvokeName: 'test_template'
-      })
+      )
       expect(response['statusCode']).to eq(200)
     end
 

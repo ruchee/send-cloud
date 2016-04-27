@@ -1,4 +1,3 @@
-require 'action_mailer'
 require 'rest-client'
 require 'json'
 require 'logging'
@@ -9,6 +8,7 @@ require 'send-cloud/apiuser'
 require 'send-cloud/domain'
 require 'send-cloud/label'
 require 'send-cloud/mail'
+require 'send-cloud/sms'
 require 'send-cloud/template'
 require 'send-cloud/userinfo'
 require 'send-cloud/version'
@@ -17,66 +17,44 @@ require 'send-cloud/version'
 module SendCloud
 
   API_BASE = 'http://api.sendcloud.net/apiv2'
+  SMS_API_BASE = 'http://sendcloud.sohu.com'
 
   class Error < StandardError; end
-
-
-  class DeliveryClass
-    attr_accessor :settings
-
-    def initialize (settings)
-      SendCloud.api_user = settings[:api_user]
-      SendCloud.api_key = settings[:api_key]
-    end
-
-    def deliver! (mail)
-      begin
-        SendCloud::Mail.sendtemplate({
-          from: mail.from_addrs.first,
-          to: mail.destinations.join(';'),
-          subject: mail.subject,
-          html: mail.body.encoded,
-          fromname: mail[:fromname].to_s
-        })
-      rescue => e
-        raise e
-      end
-    end
-
-  end
-
-  ActionMailer::Base.add_delivery_method :sendcloud, SendCloud::DeliveryClass
-
 
   def self.setup
     yield self
 
     $logger = Logging.logger['send-cloud']
     $logger.level = SendCloud.log_level
-    $logger.add_appenders(Logging.appenders.stdout, Logging.appenders.file(SendCloud.log_file)) unless
-    SendCloud.log_file == '' || SendCloud.log_file.nil?
+    unless SendCloud.log_file == '' || SendCloud.log_file.nil?
+      $logger.add_appenders(Logging.appenders.stdout, Logging.appenders.file(SendCloud.log_file))
+    end
   end
 
   class << self
-    attr_accessor :api_user, :api_key, :log_file, :log_level
+    attr_accessor :api_user, :sms_user, :api_key, :log_file, :log_level
   end
 
-  def self.get(path, params, necessary = [])
-    request(path, params, necessary) do |url, options|
+  def self.get(path, params, necessary = [], api_type = 'mail')
+    request(path, params, necessary, api_type) do |url, options|
       RestClient.get(url, {params: options})
     end
   end
 
-  def self.post(path, params, necessary = [])
-    request(path, params, necessary) do |url, options|
+  def self.post(path, params, necessary = [], api_type = 'mail')
+    request(path, params, necessary, api_type) do |url, options|
       RestClient.post(url, options)
     end
   end
 
-  def self.request(path, params, necessary, &block)
+  def self.request(path, params, necessary, api_type, &block)
     $logger.info "#{Time.now} action is #{path}, params is #{params.inspect}"
 
-    params = { apiUser: SendCloud.api_user, apiKey: SendCloud.api_key }.merge(params)
+    if api_type == 'mail'
+      params = { apiUser: SendCloud.api_user, apiKey: SendCloud.api_key }.merge(params)
+    elsif api_type == 'sms'
+      params = { smsUser: SendCloud.sms_user }.merge(params)
+    end
 
     needed_keys = necessary - params.keys
     if needed_keys != []
@@ -88,6 +66,25 @@ module SendCloud
     end
 
     url = "#{API_BASE}/#{path}"
+    url = "#{SMS_API_BASE}/#{path}" if api_type == 'sms'
+
+
+    # 短信接口需要计算签名
+    if api_type == 'sms'
+      api_key = SendCloud.api_key
+      paramstr = ''
+      paramstr << api_key << '&'
+      new_param = params.sort { |a, b| a.to_s <=> b.to_s }
+      new_param.each do |item|
+        key = item[0]
+        value = item[1]
+        paramstr << key.to_s << "=" << value << "&"
+      end
+      paramstr << api_key
+      params[:signature] = Digest::MD5.new.update(paramstr)
+    end
+
+
     begin
       raw_ret = yield(url, params)
       ret = JSON.parse(raw_ret)
@@ -102,4 +99,5 @@ module SendCloud
       raise SendCloud::Error.new('send-cloud response invalid')
     end
   end
+
 end
