@@ -89,13 +89,13 @@ module SendCloud
       raw_ret = yield(url, params)
       ret = JSON.parse(raw_ret)
       if ret['statusCode'] != 200
-        $logger.error "#{Time.now} action: #{path}, params: #{params.inspect}, result: #{raw_ret}"
+        $logger.error "#{Time.now} action: #{path.force_encoding('utf-8')}, params: #{params.inspect.force_encoding('utf-8')}, result: #{raw_ret.force_encoding('utf-8')}"
       else
-        $logger.info "#{Time.now} action: #{path}, params: #{params.inspect}, result: #{raw_ret}"
+        $logger.info "#{Time.now} action: #{path.force_encoding('utf-8')}, params: #{params.inspect.force_encoding('utf-8')}, result: #{raw_ret.force_encoding('utf-8')}"
       end
       return ret
     rescue JSON::ParserError
-      $logger.error "#{Time.now} get JSON ParseError. action: #{path}, params: #{params.inspect}"
+      $logger.error "#{Time.now} get JSON ParseError. action: #{path.force_encoding('utf-8')}, params: #{params.inspect.force_encoding('utf-8')}"
       raise SendCloud::Error.new('send-cloud response invalid')
     end
   end
